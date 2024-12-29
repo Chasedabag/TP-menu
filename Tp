@@ -1,1 +1,120 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ServerChecker"
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Create Scrolling Frame
+local scrollingFrame = Instance.new("ScrollingFrame")
+scrollingFrame.Size = UDim2.new(0.3, 0, 0.5, 0)
+scrollingFrame.Position = UDim2.new(0.35, 0, 0.25, 0)
+scrollingFrame.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
+scrollingFrame.BorderSizePixel = 0
+scrollingFrame.ScrollBarThickness = 8
+scrollingFrame.Visible = false -- Start hidden (toggle with L)
+scrollingFrame.Parent = screenGui
+
+-- Add UIListLayout for organization
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0, 5)
+listLayout.FillDirection = Enum.FillDirection.Vertical
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Parent = scrollingFrame
+
+-- Function to teleport to a player
+local function teleportToPlayer(targetPlayer)
+    if targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local targetPosition = targetPlayer.Character.HumanoidRootPart.Position
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(targetPosition + Vector3.new(0, 3, 0)) -- Offset to avoid overlap
+        else
+            warn("Local player character or HumanoidRootPart not found!")
+        end
+    else
+        warn("Target player character or HumanoidRootPart not found!")
+    end
+end
+
+-- Function to create a player entry
+local function createPlayerEntry(player)
+    local nickname = player.DisplayName -- Get the player's nickname (DisplayName)
+
+    local entry = Instance.new("Frame")
+    entry.Size = UDim2.new(1, -10, 0, 50) -- Adjust size for image and text
+    entry.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
+    entry.BorderSizePixel = 0
+    entry.Parent = scrollingFrame
+
+    -- Add rounded corners
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 8)
+    uiCorner.Parent = entry
+
+    -- Add player's avatar image
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.Size = UDim2.new(0, 40, 0, 40) -- Adjust size of the avatar image
+    imageLabel.Position = UDim2.new(0, 5, 0, 5) -- Position inside the frame
+    imageLabel.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. player.UserId .. "&width=48&height=48&format=png"
+    imageLabel.BackgroundTransparency = 1
+    imageLabel.Parent = entry
+
+    -- Add player name text
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, -50, 1, 0) -- Adjust size to fit next to the image
+    textLabel.Position = UDim2.new(0, 50, 0, 0) -- Position next to the image
+    textLabel.BackgroundTransparency = 1
+    textLabel.Font = Enum.Font.SourceSans
+    textLabel.TextSize = 16
+    textLabel.TextColor3 = Color3.new(1, 1, 1)
+    textLabel.Text = nickname .. " (" .. player.Name .. ")"
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.Parent = entry
+
+    -- Add click functionality to teleport
+    entry.MouseEnter:Connect(function()
+        textLabel.TextColor3 = Color3.new(0.7, 0.9, 1) -- Highlight on hover
+    end)
+
+    entry.MouseLeave:Connect(function()
+        textLabel.TextColor3 = Color3.new(1, 1, 1) -- Reset color
+    end)
+
+    entry.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            teleportToPlayer(player)
+        end
+    end)
+end
+
+-- Function to refresh player list
+local function refreshPlayerList()
+    -- Clear existing entries
+    for _, child in pairs(scrollingFrame:GetChildren()) do
+        if not child:IsA("UIListLayout") then
+            child:Destroy()
+        end
+    end
+
+    -- Add updated player list
+    for _, player in pairs(Players:GetPlayers()) do
+        createPlayerEntry(player)
+    end
+end
+
+-- Connect player events
+Players.PlayerAdded:Connect(refreshPlayerList)
+Players.PlayerRemoving:Connect(refreshPlayerList)
+
+-- Toggle visibility with L key
+local UserInputService = game:GetService("UserInputService")
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.L then
+        scrollingFrame.Visible = not scrollingFrame.Visible
+    end
+end)
+
+-- Initial population
+refreshPlayerList()
 
